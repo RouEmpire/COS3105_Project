@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "models.h"
+#include "../models.h"
 #include <assert.h>
 
 
