@@ -1,7 +1,0 @@
-{
-    "features": {
-        "ghcr.io/devcontainers/features/common-utils:1": {
-            "installExtraPackages": "netcat-openbsd"
-        }
-    }
-}
