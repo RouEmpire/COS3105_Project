@@ -4,7 +4,7 @@
 TEST_NAME="${1%.c}"
 
 # Compile all necessary source files
-gcc -I./src "src/tests/${TEST_NAME}.c" src/models.c src/common.c -o "$TEST_NAME"
+clang -I./src "src/tests/${TEST_NAME}.c" src/models.c src/common.c -o "$TEST_NAME"
 
 # Run only if compilation succeeded
 if [ $? -eq 0 ]; then
