@@ -97,6 +97,7 @@ int handleClient(SOCKET socket_client, char *read)
   }
   snprintf(response, sizeof(response), "%s%s%d\n", COMMAND_UNKNOWN, COMMAND_SEPARATOR, STATUS_UNKNOWN);
   send(socket_client, response, strlen(response), 0);
+  CLOSESOCKET(socket_client);
   return -1;
 }
 
@@ -254,7 +255,11 @@ int main()
 
   signal(SIGINT, handle_shutdown);  // Catches CTRL+C
   signal(SIGTERM, handle_shutdown); // Catches kill command
-  setup(SERVER_PORT);
+  if (setup(SERVER_PORT) != 0)
+  {
+      fprintf(stderr, "Server setup failed. Is another server process already running on port %s?\n", SERVER_PORT);
+      exit(1);
+  }
 
   return 0;
 }
