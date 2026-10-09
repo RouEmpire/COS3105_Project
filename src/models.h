@@ -8,7 +8,7 @@
 #define TASKID_SIZE 16
 #define TASK_TITLE_SIZE 500
 #define MAX_TASK 100
-#define MAX_BOARD 100
+#define MAX_BOARD 1000
 
 #define BOARD_FILENAME "board.txt"
 #define TASK_FILENAME "task.txt"

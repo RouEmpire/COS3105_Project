@@ -1,6 +1,7 @@
 #include "server.h"
-
-#include "server.h"
+#include "features/add_board.h"
+#include "features/get_board.h"
+#include "features/get_task.h"
 #include <signal.h>
 #include <sys/mman.h>
 #include <semaphore.h>
@@ -11,44 +12,11 @@ SOCKET socket_listen = -1;
 Project *project = NULL;
 sem_t *sem = NULL;
 
-void handleAddBoard(CommandContext *ctx)
-{
-  char *boardTitle = strtok_r(NULL, COMMAND_SEPARATOR, &ctx->rawInput);
-
-  char response[MESSAGE_SIZE];
-
-  if (isEmptyOrSpace(boardTitle))
-  {
-    snprintf(response, sizeof(response), "%s%s%d\n", COMMAND_ADD_BOARD, COMMAND_SEPARATOR, STATUS_INVALID_ARGUMENTS);
-    send(ctx->clientSocket, response, strlen(response), 0);
-  }
-  else
-  {
-    // 1. Wait for the lock (Block if another process is buying)
-    sem_wait(sem);
-
-    // 2. CRITICAL SECTION: Only one process can be here at a time
-    int result = addBoard(ctx->project, boardTitle);
-    saveBoard(ctx->project, BOARD_FILENAME);
-    // 3. Release the lock
-    sem_post(sem);
-    if (result == 0)
-    {
-      snprintf(response, sizeof(response), "%s%s%d\n", COMMAND_ADD_BOARD, COMMAND_SEPARATOR, STATUS_OK);
-      send(ctx->clientSocket, response, strlen(response), 0);
-    }
-    else
-    {
-      snprintf(response, sizeof(response), "%s%s%d\n", COMMAND_ADD_BOARD, COMMAND_SEPARATOR, STATUS_FAIL);
-      send(ctx->clientSocket, response, strlen(response), 0);
-    }
-  }
-}
-
 void handleAddTask(CommandContext *ctx)
 {
-    char *boardId = strtok_r(NULL, COMMAND_SEPARATOR, &ctx->rawInput);
-    char *taskTitle = strtok_r(NULL, COMMAND_SEPARATOR, &ctx->rawInput);
+    char *saveptr;
+    char *boardId = strtok_r(ctx->rawInput, ",\n\r", &saveptr);
+    char *taskTitle = strtok_r(NULL, ",\n\r", &saveptr);
 
     char response[MESSAGE_SIZE];
 
@@ -104,11 +72,16 @@ int handleClient(SOCKET socket_client, char *read)
       .project = project,
       .clientSocket = socket_client,
       .rawInput = saveptr,
+      .commandName = commandName,
   };
 
   CommandEntry commandTable[] = {
       {COMMAND_ADD_BOARD, handleAddBoard},
       {COMMAND_ADD_TASK, handleAddTask},
+      {COMMAND_GET_BOARD, handleGetBoard},
+      {COMMAND_GET_BOARDS, handleGetBoard},
+      {COMMAND_GET_TASK, handleGetTask},
+      {COMMAND_GET_TASKS, handleGetTask},
       {NULL, NULL} // Sentinel to mark the end
   };
 
@@ -240,7 +213,7 @@ int setup(char *port)
       while (1)
       {
         char read[1024];
-        int bytes_received = recv(socket_client, read, 1024, 0);
+        int bytes_received = recv(socket_client, read, 1023, 0);
         if (bytes_received < 1)
         {
           printf("Client disconnected.\n");
@@ -248,13 +221,25 @@ int setup(char *port)
           CLOSESOCKET(socket_client);
           exit(0);
         }
-        int j;
-        for (j = 0; j < bytes_received; ++j)
-          read[j] = read[j];
+        read[bytes_received] = '\0';
 
-        printf("%s\n", read);
-        replace_char(read, '\n', '\0');
-        handleClient(socket_client, read);
+        char *line_saveptr;
+        char *line = strtok_r(read, "\r\n", &line_saveptr);
+        while (line != NULL)
+        {
+          if (!isEmptyOrSpace(line))
+          {
+            char line_copy[1024];
+            strncpy(line_copy, line, sizeof(line_copy) - 1);
+            line_copy[sizeof(line_copy) - 1] = '\0';
+            handleClient(socket_client, line_copy);
+          }
+          line = strtok_r(NULL, "\r\n", &line_saveptr);
+        }
+
+        // Close socket and exit child process after serving request
+        CLOSESOCKET(socket_client);
+        exit(0);
       }
     }
     CLOSESOCKET(socket_client);

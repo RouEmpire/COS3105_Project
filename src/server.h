@@ -2,9 +2,15 @@
 #define SERVER_H
 
 
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200112L
+#endif
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
+#ifndef _BSD_SOURCE
 #define _BSD_SOURCE
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -17,9 +23,12 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <netdb.h>
+#include <semaphore.h>
 #include "models.h"
 #include "common.h"
 #include "protocol.h"
+
+extern sem_t *sem;
 
 
 #define ISVALIDSOCKET(s) ((s) >= 0)
@@ -29,10 +38,11 @@
 #define SERVER_PORT "3030"
 #define MESSAGE_SIZE 2000
 
-typedef struct {
+typedef struct CommandContext {
     Project *project;
     SOCKET clientSocket;
     char *rawInput;
+    const char *commandName;
 } CommandContext;
 
 // Define function pointer CommandHandler
@@ -44,9 +54,11 @@ typedef struct {
 } CommandEntry;
 
 
-// Server
+// Server Handlers
 void handleAddBoard(CommandContext *ctx);
 void handleAddTask(CommandContext *ctx);
+void handleGetBoard(CommandContext *ctx);
+void handleGetTask(CommandContext *ctx);
 
 
 // Common
