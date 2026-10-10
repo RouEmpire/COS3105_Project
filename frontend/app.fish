@@ -8,7 +8,7 @@ cd $ROOT_DIR
 # Helper function to send TCP command to server using netcat
 function send_tcp_command
     set -l cmd $argv[1]
-    set -l res (echo $cmd | nc -w 2 127.0.0.1 3030 2>/dev/null)
+    set -l res (echo $cmd | ncat -N -w 2  127.0.0.1 3030 2>/dev/null)
     echo $res
 end
 
