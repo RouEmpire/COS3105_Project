@@ -1,4 +1,8 @@
 #include "common.h"
+#include <semaphore.h>
+
+// Weak reference to global semaphore so test runners link without server.c
+__attribute__((weak)) sem_t *sem = NULL;
 int isEmptyOrSpace(const char *str) {
     if (str == NULL || *str == '\0') return 1; // ว่างเปล่าแน่นอน
     

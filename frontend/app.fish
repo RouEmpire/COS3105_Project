@@ -8,8 +8,7 @@ cd $ROOT_DIR
 # Helper function to send TCP command to server using netcat
 function send_tcp_command
     set -l cmd $argv[1]
-    set -l res (echo $cmd | ncat -N -w 2  127.0.0.1 3030 2>/dev/null)
-    echo $res
+    echo $cmd | ncat -w 2 127.0.0.1 3030 2>/dev/null
 end
 
 # Feature [1]: Get Board
@@ -147,6 +146,92 @@ function handle_add_board
     end
 end
 
+# Feature [ALL]: Get All Data (Thread Pool: 8 Workers)
+function handle_get_all_data
+    echo ""
+    set_color cyan --bold
+    echo "=== [ALL] GET ALL DATA (THREAD POOL: 8 WORKERS) ==="
+    set_color normal
+
+    # Option 1: Limit the board to display
+    read -P "Limit the board to display (e.g. 5, or press Enter for ALL) > " board_limit
+    set board_limit (string trim -- $board_limit)
+    if test -z "$board_limit"; or not string match -qr '^[0-9]+$' -- $board_limit
+        set board_limit 0
+    end
+
+    # Option 2: Limit the task of each board to display
+    read -P "Limit the task of each board to display (e.g. 3, or press Enter for ALL) > " task_limit
+    set task_limit (string trim -- $task_limit)
+    if test -z "$task_limit"; or not string match -qr '^[0-9]+$' -- $task_limit
+        set task_limit 0
+    end
+
+    echo ""
+    set_color yellow
+    echo "Querying server via 8 parallel worker threads (Board Limit: $board_limit, Task Limit: $task_limit)..."
+    set_color normal
+
+    set -l response (send_tcp_command "GET_ALL,$board_limit,$task_limit")
+
+    if test (count $response) -eq 0
+        set_color red
+        echo "Error: Unable to connect to server on 127.0.0.1:3030."
+        echo "Please make sure ./run_server.sh is running in another terminal."
+        set_color normal
+        return
+    end
+
+    set -l total_boards 0
+    set -l total_tasks 0
+
+    echo ""
+    set_color cyan --bold
+    echo "==================== KANBAN BOARDS & TASKS ===================="
+    set_color normal
+
+    for line in $response
+        set -l line (string trim -- $line)
+        if test -z "$line"; or test "$line" = "END_ALL"
+            continue
+        end
+
+        if string match -qr '^BOARD,' -- $line
+            set -l parts (string split "," -- $line)
+            set -l b_id $parts[2]
+            set -l b_title $parts[3]
+            set -l b_tasks $parts[4]
+            set total_boards (math $total_boards + 1)
+            echo ""
+            set_color blue --bold
+            echo "📂 Board [ID $b_id]: $b_title (Tasks: $b_tasks)"
+            set_color normal
+        else if string match -qr '^TASK,' -- $line
+            set -l parts (string split "," -- $line)
+            set -l t_id $parts[2]
+            set -l t_title $parts[3]
+            set -l t_finish $parts[4]
+            set total_tasks (math $total_tasks + 1)
+            if test "$t_finish" = "1"
+                set_color green
+                echo "   ├── [✓] Task #$t_id: $t_title"
+                set_color normal
+            else
+                set_color yellow
+                echo "   ├── [ ] Task #$t_id: $t_title"
+                set_color normal
+            end
+        end
+    end
+
+    echo ""
+    set_color cyan --bold
+    echo "==============================================================="
+    set_color green --bold
+    echo "✅ Summary: Retrieved $total_boards Board(s) and $total_tasks Task(s) via 8 Worker Threads."
+    set_color normal
+end
+
 # Feature [T]: Run Test
 function handle_run_tests
     echo ""
@@ -156,21 +241,27 @@ function handle_run_tests
 
     echo ""
     set_color yellow
-    echo "[1/3] Running test_add_board..."
+    echo "[1/4] Running test_add_board..."
     set_color normal
     ./run_test.sh test_add_board
 
     echo ""
     set_color yellow
-    echo "[2/3] Running test_get_board..."
+    echo "[2/4] Running test_get_board..."
     set_color normal
     ./run_test.sh test_get_board
 
     echo ""
     set_color yellow
-    echo "[3/3] Running test_models..."
+    echo "[3/4] Running test_models..."
     set_color normal
     ./run_test.sh test_models
+
+    echo ""
+    set_color yellow
+    echo "[4/4] Running test_get_all_data..."
+    set_color normal
+    ./run_test.sh test_get_all_data
 
     echo ""
     set_color green --bold
@@ -187,6 +278,7 @@ while true
     echo "> [1] Get board"
     echo "> [2] Get Task"
     echo "> [3] Add board"
+    echo "> [ALL] Get all Data"
     echo "> [T] Run Test"
     echo "> [X] Exit"
     set_color magenta
@@ -203,6 +295,8 @@ while true
             handle_get_task
         case 3
             handle_add_board
+        case ALL all
+            handle_get_all_data
         case T t
             handle_run_tests
         case X x
@@ -213,7 +307,8 @@ while true
             break
         case '*'
             set_color red
-            echo "Invalid choice '$choice'. Please enter 1, 2, 3, T, or X."
+            echo "Invalid choice '$choice'. Please enter 1, 2, 3, ALL, T, or X."
             set_color normal
     end
 end
+

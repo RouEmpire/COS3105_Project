@@ -2,6 +2,7 @@
 #include "features/add_board.h"
 #include "features/get_board.h"
 #include "features/get_task.h"
+#include "features/get_all_data.h"
 #include <signal.h>
 #include <sys/mman.h>
 #include <semaphore.h>
@@ -82,6 +83,8 @@ int handleClient(SOCKET socket_client, char *read)
       {COMMAND_GET_BOARDS, handleGetBoard},
       {COMMAND_GET_TASK, handleGetTask},
       {COMMAND_GET_TASKS, handleGetTask},
+      {COMMAND_GET_ALL, handleGetAllData},
+      {COMMAND_GET_ALL_DATA, handleGetAllData},
       {NULL, NULL} // Sentinel to mark the end
   };
 
