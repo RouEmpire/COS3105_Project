@@ -1,5 +1,149 @@
 #include "get_task.h"
+#include "get_board.h" // Reuse findBoard for board lookups
 
+/*
+ * ============================================================================
+ * THREAD WORKER FUNCTION FOR TASKS
+ * ============================================================================
+ * Each worker thread independently searches its assigned slice [startIndex, endIndex)
+ * of the board's tasks array.
+ */
+void *searchTaskWorker(void *arg)
+{
+    TaskSearchData *data = (TaskSearchData *)arg;
+
+    for (int i = data->startIndex; i < data->endIndex; i++)
+    {
+        int match = 0;
+        if (data->targetId != NULL && strcmp(data->board->tasks[i].taskId, data->targetId) == 0)
+        {
+            match = 1;
+        }
+        else if (data->targetTitle != NULL && strcmp(data->board->tasks[i].taskTitle, data->targetTitle) == 0)
+        {
+            match = 1;
+        }
+
+        if (match)
+        {
+            data->foundTask = &data->board->tasks[i];
+            break; // Found task in this thread's slice; stop early
+        }
+    }
+
+    return NULL;
+}
+
+/*
+ * ============================================================================
+ * MULTI-THREADED PARALLEL SEARCH FOR TASKS
+ * ============================================================================
+ * Divides the board's tasks array into chunks of 100 items each and spawns
+ * 1 thread per chunk (100 tasks each) to search concurrently in parallel.
+ */
+Task *findTaskParallel(Board *board, const char *taskId, const char *taskTitle)
+{
+    int total = board->totalTasks;
+    int numThreads = (total + 99) / 100;
+
+    printf("[Parallel Task Search] Launching %d worker thread(s) for %d tasks...\n", numThreads, total);
+
+    pthread_t threads[numThreads];
+    TaskSearchData searchData[numThreads];
+    Task *result = NULL;
+
+    for (int i = 0; i < numThreads; i++)
+    {
+        int start = i * 100;
+        int end = (i + 1) * 100;
+        if (end > total)
+        {
+            end = total;
+        }
+
+        searchData[i].board = board;
+        searchData[i].targetId = taskId;
+        searchData[i].targetTitle = taskTitle;
+        searchData[i].startIndex = start;
+        searchData[i].endIndex = end;
+        searchData[i].foundTask = NULL;
+
+        printf("  -> Task Thread %d assigned range: [%d to %d)\n", i, start, end);
+        pthread_create(&threads[i], NULL, searchTaskWorker, &searchData[i]);
+    }
+
+    for (int i = 0; i < numThreads; i++)
+    {
+        pthread_join(threads[i], NULL);
+        if (searchData[i].foundTask != NULL)
+        {
+            result = searchData[i].foundTask;
+        }
+    }
+
+    return result;
+}
+
+/*
+ * ============================================================================
+ * REUSABLE TASK FINDERS (BY ID & BY NAME)
+ * ============================================================================
+ * - If totalTasks < 100 : Single-threaded linear search loop.
+ * - If totalTasks >= 100: Multi-threaded parallel search (1 thread per 100 tasks).
+ */
+Task *findTask(Board *board, const char *taskId)
+{
+    if (board == NULL || taskId == NULL) return NULL;
+    int total = board->totalTasks;
+
+    if (total < 100)
+    {
+        printf("[Sequential Task Search] Total tasks (%d) < 100. Using single thread loop.\n", total);
+        for (int i = 0; i < total; i++)
+        {
+            if (strcmp(board->tasks[i].taskId, taskId) == 0)
+            {
+                return &board->tasks[i];
+            }
+        }
+        return NULL;
+    }
+    else
+    {
+        printf("[Parallel Task Search] Total tasks (%d) >= 100. Switching to pthread multi-threading.\n", total);
+        return findTaskParallel(board, taskId, NULL);
+    }
+}
+
+Task *findTaskByName(Board *board, const char *taskTitle)
+{
+    if (board == NULL || taskTitle == NULL) return NULL;
+    int total = board->totalTasks;
+
+    if (total < 100)
+    {
+        printf("[Sequential Task Search] Total tasks (%d) < 100. Using single thread loop.\n", total);
+        for (int i = 0; i < total; i++)
+        {
+            if (strcmp(board->tasks[i].taskTitle, taskTitle) == 0)
+            {
+                return &board->tasks[i];
+            }
+        }
+        return NULL;
+    }
+    else
+    {
+        printf("[Parallel Task Search] Total tasks (%d) >= 100. Switching to pthread multi-threading.\n", total);
+        return findTaskParallel(board, NULL, taskTitle);
+    }
+}
+
+/*
+ * ============================================================================
+ * COMMAND HANDLER: GET_TASK / GET_TASKS
+ * ============================================================================
+ */
 void handleGetTask(CommandContext *ctx)
 {
     char *saveptr;
@@ -15,7 +159,8 @@ void handleGetTask(CommandContext *ctx)
         return;
     }
 
-    Board *board = hasBoard(ctx->project, boardId);
+    // Reuse findBoard from get_board.h (parallel search if >= 100 boards)
+    Board *board = findBoard(ctx->project, boardId);
     if (board == NULL)
     {
         snprintf(response, sizeof(response), "%s%s%d\n", cmd, COMMAND_SEPARATOR, STATUS_BOARD_NOT_FOUND);
@@ -26,7 +171,8 @@ void handleGetTask(CommandContext *ctx)
     // Case 1: Specific Task ID requested (GET_TASK)
     if (!isEmptyOrSpace(taskId))
     {
-        Task *task = hasTask(ctx->project, boardId, taskId);
+        // Reusable parallel findTask (1 thread per 100 tasks if >= 100 tasks)
+        Task *task = findTask(board, taskId);
         if (task == NULL)
         {
             snprintf(response, sizeof(response), "%s%s%d\n", cmd, COMMAND_SEPARATOR, STATUS_TASK_NOT_FOUND);
