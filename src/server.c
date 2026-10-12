@@ -1,5 +1,6 @@
 #include "server.h"
 #include "features/add_board.h"
+#include "features/add_task.h"
 #include "features/get_board.h"
 #include "features/get_task.h"
 #include "features/get_all_data.h"
@@ -12,52 +13,6 @@
 SOCKET socket_listen = -1;
 Project *project = NULL;
 sem_t *sem = NULL;
-
-void handleAddTask(CommandContext *ctx)
-{
-    char *saveptr;
-    char *boardId = strtok_r(ctx->rawInput, ",\n\r", &saveptr);
-    char *taskTitle = strtok_r(NULL, ",\n\r", &saveptr);
-
-    char response[MESSAGE_SIZE];
-
-    if (boardId == NULL || taskTitle == NULL ||
-        isEmptyOrSpace(boardId) || isEmptyOrSpace(taskTitle))
-    {
-        snprintf(response, sizeof(response), "%s%s%d\n", COMMAND_ADD_TASK, COMMAND_SEPARATOR, STATUS_INVALID_ARGUMENTS);
-        send(ctx->clientSocket, response, strlen(response), 0);
-        return;
-    }
-
-    Board *board = hasBoard(ctx->project, boardId);
-
-    if (board == NULL)
-    {
-        snprintf(response, sizeof(response), "%s%s%d\n", COMMAND_ADD_TASK, COMMAND_SEPARATOR, STATUS_BOARD_NOT_FOUND);
-        send(ctx->clientSocket, response, strlen(response), 0);
-        return;
-    }
-
-    // 1. Wait for the lock
-    sem_wait(sem);
-
-    // 2. CRITICAL SECTION
-    int result = addTask(board, taskTitle);
-    saveAllTasks(ctx->project, TASK_FILENAME);
-
-    // 3. Release the lock
-    sem_post(sem);
-
-    if (result == 0)
-    {
-        snprintf(response, sizeof(response), "%s%s%d\n", COMMAND_ADD_TASK, COMMAND_SEPARATOR, STATUS_OK);
-    }
-    else
-    {
-        snprintf(response, sizeof(response), "%s%s%d\n", COMMAND_ADD_TASK, COMMAND_SEPARATOR, STATUS_FAIL);
-    }
-    send(ctx->clientSocket, response, strlen(response), 0);
-}
 
 int handleClient(SOCKET socket_client, char *read)
 {

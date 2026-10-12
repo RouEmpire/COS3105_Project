@@ -232,6 +232,71 @@ function handle_get_all_data
     set_color normal
 end
 
+# Feature [4]: Add Task
+function handle_add_task
+    echo ""
+    set_color cyan --bold
+    echo "=== [4] ADD TASK ==="
+    set_color normal
+
+    # Option 1: Board ID (that task will belong to)
+    read -P "Enter Board ID > " board_id
+    set board_id (string trim -- $board_id)
+
+    if test -z "$board_id"
+        set_color red
+        echo "Error: Board ID cannot be empty."
+        set_color normal
+        return
+    end
+
+    # Option 2: Task name
+    read -P "Enter Task Name > " task_name
+    set task_name (string trim -- $task_name)
+
+    if test -z "$task_name"
+        set_color red
+        echo "Error: Task Name cannot be empty."
+        set_color normal
+        return
+    end
+
+    set -l response (send_tcp_command "ADD_TASK,$board_id,$task_name")
+
+    if test (count $response) -eq 0
+        set_color red
+        echo "Error: Unable to connect to server on 127.0.0.1:3030."
+        echo "Please make sure ./run_server.sh is running in another terminal."
+        set_color normal
+    else if string match -q "*ADD_TASK,0*" -- $response[1]
+        set -l parts (string split "," -- $response[1])
+        set -l task_id $parts[3]
+        set_color green --bold
+        if test -n "$task_id"
+            echo "SUCCESS: Task '$task_name' created successfully on Board ID $board_id (Task ID: $task_id)!"
+        else
+            echo "SUCCESS: Task '$task_name' created successfully on Board ID $board_id!"
+        end
+        set_color normal
+    else if string match -q "*201*" -- $response[1]
+        set_color yellow
+        echo "NOT FOUND: Board ID '$board_id' does not exist (Status 201)."
+        set_color normal
+    else if string match -q "*Task already exists*" -- $response[1]
+        set_color yellow
+        echo "DUPLICATE: A task with name '$task_name' already exists on Board ID $board_id."
+        set_color normal
+    else if string match -q "*200*" -- $response[1]
+        set_color yellow
+        echo "INVALID ARGUMENTS: Invalid arguments provided (Status 200)."
+        set_color normal
+    else
+        set_color yellow
+        echo "Server Response: $response"
+        set_color normal
+    end
+end
+
 # Feature [T]: Run Test
 function handle_run_tests
     echo ""
@@ -241,25 +306,31 @@ function handle_run_tests
 
     echo ""
     set_color yellow
-    echo "[1/4] Running test_add_board..."
+    echo "[1/5] Running test_add_board..."
     set_color normal
     ./run_test.sh test_add_board
 
     echo ""
     set_color yellow
-    echo "[2/4] Running test_get_board..."
+    echo "[2/5] Running test_add_task..."
+    set_color normal
+    ./run_test.sh test_add_task
+
+    echo ""
+    set_color yellow
+    echo "[3/5] Running test_get_board..."
     set_color normal
     ./run_test.sh test_get_board
 
     echo ""
     set_color yellow
-    echo "[3/4] Running test_models..."
+    echo "[4/5] Running test_models..."
     set_color normal
     ./run_test.sh test_models
 
     echo ""
     set_color yellow
-    echo "[4/4] Running test_get_all_data..."
+    echo "[5/5] Running test_get_all_data..."
     set_color normal
     ./run_test.sh test_get_all_data
 
@@ -278,6 +349,7 @@ while true
     echo "> [1] Get board"
     echo "> [2] Get Task"
     echo "> [3] Add board"
+    echo "> [4] Add Task"
     echo "> [ALL] Get all Data"
     echo "> [T] Run Test"
     echo "> [X] Exit"
@@ -295,6 +367,8 @@ while true
             handle_get_task
         case 3
             handle_add_board
+        case 4
+            handle_add_task
         case ALL all
             handle_get_all_data
         case T t
@@ -307,8 +381,9 @@ while true
             break
         case '*'
             set_color red
-            echo "Invalid choice '$choice'. Please enter 1, 2, 3, ALL, T, or X."
+            echo "Invalid choice '$choice'. Please enter 1, 2, 3, 4, ALL, T, or X."
             set_color normal
     end
 end
+
 
