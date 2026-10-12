@@ -60,6 +60,8 @@ void handleAddTask(CommandContext *ctx);
 void handleGetBoard(CommandContext *ctx);
 void handleGetTask(CommandContext *ctx);
 void handleGetAllData(CommandContext *ctx);
+void handleUpdateBoard(CommandContext *ctx);
+void handleUpdateTask(CommandContext *ctx);
 
 
 // Common

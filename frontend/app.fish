@@ -297,6 +297,131 @@ function handle_add_task
     end
 end
 
+# Feature [5]: Update Board
+function handle_update_board
+    echo ""
+    set_color cyan --bold
+    echo "=== [5] UPDATE BOARD ==="
+    set_color normal
+
+    # Identifier: Board ID
+    read -P "Enter Board ID to update > " board_id
+    set board_id (string trim -- $board_id)
+
+    if test -z "$board_id"
+        set_color red
+        echo "Error: Board ID cannot be empty."
+        set_color normal
+        return
+    end
+
+    # New Board Name
+    read -P "Enter New Board Name > " new_board_name
+    set new_board_name (string trim -- $new_board_name)
+
+    if test -z "$new_board_name"
+        set_color red
+        echo "Error: Board Name cannot be empty."
+        set_color normal
+        return
+    end
+
+    set -l response (send_tcp_command "UPDATE_BOARD,$board_id,$new_board_name")
+
+    if test (count $response) -eq 0
+        set_color red
+        echo "Error: Unable to connect to server on 127.0.0.1:3030."
+        echo "Please make sure ./run_server.sh is running in another terminal."
+        set_color normal
+    else if string match -q "*UPDATE_BOARD,0*" -- $response[1]
+        set_color green --bold
+        echo "SUCCESS: Board [ID: $board_id] updated successfully to '$new_board_name'!"
+        set_color normal
+    else if string match -q "*201*" -- $response[1]
+        set_color yellow
+        echo "NOT FOUND: Board ID '$board_id' does not exist (Status 201)."
+        set_color normal
+    else if string match -q "*200*" -- $response[1]
+        set_color yellow
+        echo "INVALID ARGUMENTS: Invalid arguments provided (Status 200)."
+        set_color normal
+    else
+        set_color yellow
+        echo "Server Response: $response"
+        set_color normal
+    end
+end
+
+# Feature [6]: Update Task
+function handle_update_task
+    echo ""
+    set_color cyan --bold
+    echo "=== [6] UPDATE TASK ==="
+    set_color normal
+
+    # Identifier 1: Board ID
+    read -P "Enter Board ID > " board_id
+    set board_id (string trim -- $board_id)
+
+    if test -z "$board_id"
+        set_color red
+        echo "Error: Board ID cannot be empty."
+        set_color normal
+        return
+    end
+
+    # Identifier 2: Task ID
+    read -P "Enter Task ID to update > " task_id
+    set task_id (string trim -- $task_id)
+
+    if test -z "$task_id"
+        set_color red
+        echo "Error: Task ID cannot be empty."
+        set_color normal
+        return
+    end
+
+    # New Task Name
+    read -P "Enter New Task Name > " new_task_name
+    set new_task_name (string trim -- $new_task_name)
+
+    if test -z "$new_task_name"
+        set_color red
+        echo "Error: Task Name cannot be empty."
+        set_color normal
+        return
+    end
+
+    set -l response (send_tcp_command "UPDATE_TASK,$board_id,$task_id,$new_task_name")
+
+    if test (count $response) -eq 0
+        set_color red
+        echo "Error: Unable to connect to server on 127.0.0.1:3030."
+        echo "Please make sure ./run_server.sh is running in another terminal."
+        set_color normal
+    else if string match -q "*UPDATE_TASK,0*" -- $response[1]
+        set_color green --bold
+        echo "SUCCESS: Task [ID: $task_id] on Board [ID: $board_id] updated successfully to '$new_task_name'!"
+        set_color normal
+    else if string match -q "*201*" -- $response[1]
+        set_color yellow
+        echo "NOT FOUND: Board ID '$board_id' does not exist (Status 201)."
+        set_color normal
+    else if string match -q "*203*" -- $response[1]
+        set_color yellow
+        echo "NOT FOUND: Task ID '$task_id' does not exist on Board ID '$board_id' (Status 203)."
+        set_color normal
+    else if string match -q "*200*" -- $response[1]
+        set_color yellow
+        echo "INVALID ARGUMENTS: Invalid arguments provided (Status 200)."
+        set_color normal
+    else
+        set_color yellow
+        echo "Server Response: $response"
+        set_color normal
+    end
+end
+
 # Feature [T]: Run Test
 function handle_run_tests
     echo ""
@@ -306,31 +431,43 @@ function handle_run_tests
 
     echo ""
     set_color yellow
-    echo "[1/5] Running test_add_board..."
+    echo "[1/7] Running test_add_board..."
     set_color normal
     ./run_test.sh test_add_board
 
     echo ""
     set_color yellow
-    echo "[2/5] Running test_add_task..."
+    echo "[2/7] Running test_add_task..."
     set_color normal
     ./run_test.sh test_add_task
 
     echo ""
     set_color yellow
-    echo "[3/5] Running test_get_board..."
+    echo "[3/7] Running test_update_board..."
+    set_color normal
+    ./run_test.sh test_update_board
+
+    echo ""
+    set_color yellow
+    echo "[4/7] Running test_update_task..."
+    set_color normal
+    ./run_test.sh test_update_task
+
+    echo ""
+    set_color yellow
+    echo "[5/7] Running test_get_board..."
     set_color normal
     ./run_test.sh test_get_board
 
     echo ""
     set_color yellow
-    echo "[4/5] Running test_models..."
+    echo "[6/7] Running test_models..."
     set_color normal
     ./run_test.sh test_models
 
     echo ""
     set_color yellow
-    echo "[5/5] Running test_get_all_data..."
+    echo "[7/7] Running test_get_all_data..."
     set_color normal
     ./run_test.sh test_get_all_data
 
@@ -350,6 +487,8 @@ while true
     echo "> [2] Get Task"
     echo "> [3] Add board"
     echo "> [4] Add Task"
+    echo "> [5] Update Board"
+    echo "> [6] Update Task"
     echo "> [ALL] Get all Data"
     echo "> [T] Run Test"
     echo "> [X] Exit"
@@ -369,6 +508,10 @@ while true
             handle_add_board
         case 4
             handle_add_task
+        case 5
+            handle_update_board
+        case 6
+            handle_update_task
         case ALL all
             handle_get_all_data
         case T t
@@ -381,7 +524,7 @@ while true
             break
         case '*'
             set_color red
-            echo "Invalid choice '$choice'. Please enter 1, 2, 3, 4, ALL, T, or X."
+            echo "Invalid choice '$choice'. Please enter 1, 2, 3, 4, 5, 6, ALL, T, or X."
             set_color normal
     end
 end
