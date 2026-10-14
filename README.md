@@ -1,15 +1,11 @@
 ![Zeen\'s Kanban Board](.github/assets/banner.webp 'Zeen\'s Kanban Board')
 
 <p align="center">
-    Zeen's Kanban Board
+    <h3>Zeen's Kanban Board</h3>
     <br/>
     A small C-based Kanban board service for practicing operating-systems concepts, including TCP sockets, process synchronization, shared memory, file persistence, and pthread-based parallel search. The interactive client is written in <b>Fish shell</b>. Also come with a generate fake data script for testing!
   </br></br>
 </p>
-
-<div align="center">
-    [![License](https://img.shields.io/badge/License-MIT)
-</div>
 
 ## Contents
 
