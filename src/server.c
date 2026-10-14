@@ -113,8 +113,14 @@ int setup(char *port)
   project = mmap(NULL, sizeof(Project), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   loadProject(project, BOARD_FILENAME, TASK_FILENAME);
 
-  struct addrinfo *bind_address;
-  getaddrinfo(0, port, &hints, &bind_address);
+  struct addrinfo *bind_address = NULL;
+  int address_result = getaddrinfo(NULL, port, &hints, &bind_address);
+  if (address_result != 0)
+  {
+    /* getaddrinfo() returns EAI codes, not errno values. */
+    fprintf(stderr, "getaddrinfo() failed: %s\n", gai_strerror(address_result));
+    return 1;
+  }
 
   printf("Creating socket...\n");
 
