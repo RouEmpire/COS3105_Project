@@ -8,10 +8,8 @@
 </p>
 
 <div align="center">
-
-<!--# Zeen's Kanban Board
-
-A small C-based Kanban board service for practicing operating-systems concepts, including TCP sockets, process synchronization, shared memory, file persistence, and pthread-based parallel search. The interactive client is written in **Fish shell**.-->
+    [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/rouempire/COS3105_Project/blob/main/LICENSE)
+<div>
 
 ## Contents
 
