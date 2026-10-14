@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <string.h>
+// #include <string.h>
 #include "../models.h"
 #include "../features/get_all_data.h"
 

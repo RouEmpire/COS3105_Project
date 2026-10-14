@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <string.h>
+// #include <string.h>
 #include <semaphore.h>
 #include <fcntl.h>
 #include "../models.h"
 #include "../features/get_board.h"
 #include "../features/get_task.h"
-#include "../features/set_task_status.h"
+// #include "../features/set_task_status.h"
 
 // Define global semaphore pointer used across features
 sem_t *sem = NULL;

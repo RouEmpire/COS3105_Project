@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include "models.h"
-#include "server.h"
-#include "features/get_board.h"
+#include "../models.h"
+#include "../server.h"
+// #include "../features/get_board.h"
 
 int main() {
     printf("Testing handleGetBoard directly\n");

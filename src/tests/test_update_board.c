@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include "../models.h"
 #include "../features/get_board.h"
-#include "../features/update_board.h"
+// #include "../features/update_board.h"
 
 // Define global semaphore pointer used across features
 sem_t *sem = NULL;
