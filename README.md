@@ -1,6 +1,15 @@
-# Kanban Board Server
+![Zeen\'s Kanban Board](.github/assets/banner.webp 'Zeen\'s Kanban Board')
 
-A small C-based Kanban board service for practicing operating-systems concepts, including TCP sockets, process synchronization, shared memory, file persistence, and pthread-based parallel search. The interactive client is written in **Fish shell**.
+<p align="center">
+    Zeen's Kanban Board
+    <br/>
+    A small C-based Kanban board service for practicing operating-systems concepts, including TCP sockets, process synchronization, shared memory, file persistence, and pthread-based parallel search. The interactive client is written in <b>Fish shell<b/>. Also com with a generate fake data script for testing!
+  <br/><br/>
+</p>
+
+<div align="center">
+    [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/rouempire/COS3105_Project/blob/main/LICENSE)
+<div>
 
 ## Contents
 
@@ -46,6 +55,8 @@ sudo pacman -Syu --needed clang fish nmap psmisc python
 > These commands install system packages and require `sudo` (or root access). If your distribution separates `ncat` into a different package, install the package that provides the `ncat` executable.
 
 ## Project structure
+
+[![Architecture diagram of rouempire/cos3105_project](https://gitdiagram.com/rouempire/cos3105_project/diagram.png)](https://gitdiagram.com/rouempire/cos3105_project?utm_source=readme&utm_medium=picture)
 
 ```text
 .
