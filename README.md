@@ -47,6 +47,8 @@ sudo pacman -Syu --needed clang fish nmap psmisc python
 
 ## Project structure
 
+[![Architecture diagram of rouempire/cos3105_project](https://gitdiagram.com/rouempire/cos3105_project/diagram.png)](https://gitdiagram.com/rouempire/cos3105_project?utm_source=readme&utm_medium=picture)
+
 ```text
 .
 ├── frontend/
