@@ -1,6 +1,17 @@
-# Kanban Board Server
+![Zeen\'s Kanban Board](.github/assets/banner.webp 'Zeen\'s Kanban Board')
 
-A small C-based Kanban board service for practicing operating-systems concepts, including TCP sockets, process synchronization, shared memory, file persistence, and pthread-based parallel search. The interactive client is written in **Fish shell**.
+<p align="center">
+    Zeen's Kanban Board
+    <br/>
+    A small C-based Kanban board service for practicing operating-systems concepts, including TCP sockets, process synchronization, shared memory, file persistence, and pthread-based parallel search. The interactive client is written in <b>Fish shell<b/>. Also com with a generate fake data script for testing!
+  <br/><br/>
+</p>
+
+<div align="center">
+
+<!--# Zeen's Kanban Board
+
+A small C-based Kanban board service for practicing operating-systems concepts, including TCP sockets, process synchronization, shared memory, file persistence, and pthread-based parallel search. The interactive client is written in **Fish shell**.-->
 
 ## Contents
 
