@@ -27,18 +27,31 @@ int readBoard(Project *project, char *fileName){
     flock(fd, LOCK_EX);
     while (fgets(buffer, sizeof(buffer), file_ptr) != NULL && i < MAX_BOARD)
     {
-        // 1. Remove newline
-        buffer[strcspn(buffer, "\n")] = 0;
+        // 1. Remove the line ending before comparing or tokenizing the record.
+        buffer[strcspn(buffer, "\r\n")] = '\0';
 
-        // 2. Correct Tokenizing
+        /*
+         * Keep a tombstone in the same array slot.  Keeping the slot prevents
+         * an application restart from renumbering later board IDs, while the
+         * flag makes normal board operations treat this record as deleted.
+         */
+        if (strcmp(buffer, DELETED_BOARD_RECORD) == 0)
+        {
+            project->boards[i].isDeleted = 1;
+            i++;
+            continue;
+        }
+
+        // 2. Tokenize an active record: boardId,boardTitle.
         char *boardId = strtok(buffer, ",");
         char *boardTitle = strtok(NULL, ",");
 
-        // 3. Check if tokens exist before using them
+        // 3. Check tokens before storing a valid active board.
         if (boardId != NULL && boardTitle != NULL)
         {
             strcpy(project->boards[i].boardId, boardId);
             strcpy(project->boards[i].boardTitle, boardTitle);
+            project->boards[i].isDeleted = 0;
             i++;
         }
     }
@@ -60,9 +73,20 @@ int saveBoard(Project *project,  char *fileName){
     int fd = fileno(file_ptr);
     flock(fd, LOCK_EX);
     Board *boards = project->boards;
-    for (int i = 0; i < MAX_BOARD; i++)
+    /*
+     * Write only allocated board slots.  A deleted slot is intentionally a
+     * single "---" line, as required by the soft-delete file format.
+     */
+    for (int i = 0; i < project->totalBoards; i++)
     {
-        fprintf(file_ptr, "%s,%s\n", boards[i].boardId, boards[i].boardTitle);
+        if (boards[i].isDeleted)
+        {
+            fprintf(file_ptr, "%s\n", DELETED_BOARD_RECORD);
+        }
+        else
+        {
+            fprintf(file_ptr, "%s,%s\n", boards[i].boardId, boards[i].boardTitle);
+        }
     }
     flock(fd, LOCK_UN);
     fclose(file_ptr);
@@ -85,41 +109,49 @@ int readAllTasks(Project *project, char *fileName){
 
     while (fgets(buffer, sizeof(buffer), file_ptr) != NULL)
     {
-        // 1. Remove newline
-        buffer[strcspn(buffer, "\n")] = 0;
+        // 1. Remove the line ending before parsing this task record.
+        buffer[strcspn(buffer, "\r\n")] = '\0';
 
-        // 2. Tokenize
+        // 2. The board ID is retained even for a deleted task tombstone.
         char *boardId = strtok(buffer, ",");
         char *taskId = strtok(NULL, ",");
-        char *taskTitle = strtok(NULL, ",");
-        char *isFinishStr = strtok(NULL, ",");
+        if (boardId == NULL || taskId == NULL)
+            continue; // skip malformed records
 
-        if (boardId == NULL || taskId == NULL || taskTitle == NULL || isFinishStr == NULL)
-            continue; // skip malformed line
-
-        // 3. Find the board with this boardId
+        // 3. Find the active board to which this task record belongs.
         Board *targetBoard = NULL;
         for (int b = 0; b < project->totalBoards; b++)
         {
-            if (strcmp(project->boards[b].boardId, boardId) == 0)
+            if (!project->boards[b].isDeleted &&
+                strcmp(project->boards[b].boardId, boardId) == 0)
             {
                 targetBoard = &project->boards[b];
                 break;
             }
         }
 
-        if (targetBoard == NULL)
-            continue; // task belongs to a board we don't have (shouldn't normally happen)
+        if (targetBoard == NULL || targetBoard->totalTasks >= MAX_TASK)
+            continue;
 
-        // 4. Add task to that board (bounds-checked)
-        if (targetBoard->totalTasks < MAX_TASK)
+        // 4. Restore a "boardId,---" tombstone without renumbering later tasks.
+        int i = targetBoard->totalTasks;
+        if (strcmp(taskId, DELETED_BOARD_RECORD) == 0)
         {
-            int i = targetBoard->totalTasks;
-            strcpy(targetBoard->tasks[i].taskId, taskId);
-            strcpy(targetBoard->tasks[i].taskTitle, taskTitle);
-            targetBoard->tasks[i].isFinish = atoi(isFinishStr);
+            targetBoard->tasks[i].isDeleted = 1;
             targetBoard->totalTasks++;
+            continue;
         }
+
+        char *taskTitle = strtok(NULL, ",");
+        char *isFinishStr = strtok(NULL, ",");
+        if (taskTitle == NULL || isFinishStr == NULL)
+            continue;
+
+        strcpy(targetBoard->tasks[i].taskId, taskId);
+        strcpy(targetBoard->tasks[i].taskTitle, taskTitle);
+        targetBoard->tasks[i].isFinish = atoi(isFinishStr);
+        targetBoard->tasks[i].isDeleted = 0;
+        targetBoard->totalTasks++;
     }
 
     flock(fd, LOCK_UN);
@@ -137,12 +169,23 @@ int saveAllTasks(Project *project, char *fileName){
 
     for (int b = 0; b < project->totalBoards; b++) {
         Board *board = &project->boards[b];
+
+        /* Deleted boards must not keep producing orphaned task records. */
+        if (board->isDeleted) {
+            continue;
+        }
+
         for (int i = 0; i < board->totalTasks; i++) {
-            fprintf(file_ptr, "%s,%s,%s,%d\n",
-                    board->boardId,
-                    board->tasks[i].taskId,
-                    board->tasks[i].taskTitle,
-                    board->tasks[i].isFinish);
+            if (board->tasks[i].isDeleted) {
+                /* Keep the parent ID, but erase all task-specific data. */
+                fprintf(file_ptr, "%s,%s\n", board->boardId, DELETED_BOARD_RECORD);
+            } else {
+                fprintf(file_ptr, "%s,%s,%s,%d\n",
+                        board->boardId,
+                        board->tasks[i].taskId,
+                        board->tasks[i].taskTitle,
+                        board->tasks[i].isFinish);
+            }
         }
     }
 
@@ -167,10 +210,11 @@ int addTask(Board *board, char *taskTitle){
 }
 Board *hasBoard(Project *project,char *boardId){
     Board *board = NULL;
-    if(boardId==NULL) return NULL;
+    if(project == NULL || boardId==NULL) return NULL;
     for (int i = 0; i < project->totalBoards; i++)
     {
-        if (strcmp(project->boards[i].boardId, boardId) == 0)
+        if (!project->boards[i].isDeleted &&
+            strcmp(project->boards[i].boardId, boardId) == 0)
         {
             board = &project->boards[i];
             break;

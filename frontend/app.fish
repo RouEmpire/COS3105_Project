@@ -422,6 +422,114 @@ function handle_update_task
     end
 end
 
+# Feature [8]: Soft Delete Board
+function handle_delete_board
+    echo ""
+    set_color cyan --bold
+    echo "=== [8] SOFT DELETE BOARD ==="
+    set_color normal
+
+    # DELETE_BOARD accepts exactly one option: a positive numeric board ID.
+    read -P "Enter Board ID to soft delete > " board_id
+    set board_id (string trim -- $board_id)
+
+    if not string match -qr '^[1-9][0-9]*$' -- $board_id
+        set_color red
+        echo "Error: Board ID must be a positive number."
+        set_color normal
+        return
+    end
+
+    # The server replaces this board's board.txt line with "---".
+    set -l response (send_tcp_command "DELETE_BOARD,$board_id")
+
+    if test (count $response) -eq 0
+        set_color red
+        echo "Error: Unable to connect to server on 127.0.0.1:3030."
+        echo "Please make sure ./run_server.sh is running in another terminal."
+        set_color normal
+    else if string match -q "*DELETE_BOARD,0*" -- $response[1]
+        set_color green --bold
+        echo "SUCCESS: Board [ID: $board_id] was soft deleted."
+        set_color normal
+        echo "Its record in board.txt is now marked as '---'."
+    else if string match -q "*201*" -- $response[1]
+        set_color yellow
+        echo "NOT FOUND: Board ID '$board_id' does not exist (Status 201)."
+        set_color normal
+    else if string match -q "*200*" -- $response[1]
+        set_color yellow
+        echo "INVALID ARGUMENTS: Board ID is invalid (Status 200)."
+        set_color normal
+    else
+        set_color yellow
+        echo "Server Response: $response"
+        set_color normal
+    end
+end
+
+# Feature [9]: Soft Delete Task
+function handle_delete_task
+    echo ""
+    set_color cyan --bold
+    echo "=== [9] SOFT DELETE TASK ==="
+    set_color normal
+
+    # DELETE_TASK requires two positive numeric identifiers.
+    read -P "Enter Board ID > " board_id
+    set board_id (string trim -- $board_id)
+    read -P "Enter Task ID to soft delete > " task_id
+    set task_id (string trim -- $task_id)
+
+    if not string match -qr '^[1-9][0-9]*$' -- $board_id
+        set_color red
+        echo "Error: Board ID must be a positive number."
+        set_color normal
+        return
+    end
+
+    if not string match -qr '^[1-9][0-9]*$' -- $task_id
+        set_color red
+        echo "Error: Task ID must be a positive number."
+        set_color normal
+        return
+    end
+
+    set -l response (send_tcp_command "DELETE_TASK,$board_id,$task_id")
+
+    if test (count $response) -eq 0
+        set_color red
+        echo "Error: Unable to connect to server on 127.0.0.1:3030."
+        echo "Please make sure ./run_server.sh is running in another terminal."
+        set_color normal
+    else if string match -q "*DELETE_TASK,0*" -- $response[1]
+        set_color green --bold
+        echo "SUCCESS: Task [ID: $task_id] on Board [ID: $board_id] was soft deleted."
+        set_color normal
+    else if string match -q "*201*" -- $response[1]
+        set_color yellow
+        echo "NOT FOUND: Board ID '$board_id' does not exist (Status 201)."
+        set_color normal
+    else if string match -q "*203*" -- $response[1]
+        set_color yellow
+        echo "NOT FOUND: Task ID '$task_id' does not exist on Board ID '$board_id' (Status 203)."
+        set_color normal
+    else if string match -q "*200*" -- $response[1]
+        set_color yellow
+        echo "INVALID ARGUMENTS: Board ID and Task ID must be valid (Status 200)."
+        set_color normal
+    else if string match -q "UNKNOWN,3*" -- $response[1]
+        set_color red --bold
+        echo "ERROR: The server does not recognize DELETE_TASK."
+        echo "Stop the running server and restart it with ./run_server.sh to rebuild the latest command handlers."
+        set_color normal
+    else
+        set_color yellow
+        echo "Server Response: $response"
+        set_color normal
+    end
+end
+
 # Feature [7]: Generate Fake Data
 function handle_generate_fake_data
     echo ""
@@ -590,6 +698,8 @@ while true
     echo "> [5] Update Board"
     echo "> [6] Update Task"
     echo "> [7] Generate Fake Data"
+    echo "> [8] Soft Delete Board"
+    echo "> [9] Soft Delete Task"
     echo "> [ALL] Get all Data"
     echo "> [T] Run Test"
     echo "> [X] Exit"
@@ -615,6 +725,10 @@ while true
             handle_update_task
         case 7
             handle_generate_fake_data
+        case 8
+            handle_delete_board
+        case 9
+            handle_delete_task
         case ALL all
             handle_get_all_data
         case T t
@@ -627,7 +741,7 @@ while true
             break
         case '*'
             set_color red
-            echo "Invalid choice '$choice'. Please enter 1, 2, 3, 4, 5, 6, 7, ALL, T, or X."
+            echo "Invalid choice '$choice'. Please enter 1, 2, 3, 4, 5, 6, 7, 8, 9, ALL, T, or X."
             set_color normal
     end
 end

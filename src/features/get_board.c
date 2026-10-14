@@ -15,7 +15,9 @@ void *searchBoardWorker(void *arg)
     // Search only within this thread's assigned range [startIndex, endIndex)
     for (int i = data->startIndex; i < data->endIndex; i++)
     {
-        if (strcmp(data->project->boards[i].boardId, data->targetId) == 0)
+        /* Tombstone slots are retained for ID stability but are not boards. */
+        if (!data->project->boards[i].isDeleted &&
+            strcmp(data->project->boards[i].boardId, data->targetId) == 0)
         {
             // Found matching board! Save it in our data structure
             data->foundBoard = &data->project->boards[i];
@@ -108,7 +110,8 @@ Board *findBoard(Project *project, const char *boardId)
         // Simple single-threaded search loop
         for (int i = 0; i < total; i++)
         {
-            if (strcmp(project->boards[i].boardId, boardId) == 0)
+            if (!project->boards[i].isDeleted &&
+                strcmp(project->boards[i].boardId, boardId) == 0)
             {
                 return &project->boards[i];
             }

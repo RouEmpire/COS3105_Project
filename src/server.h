@@ -61,6 +61,8 @@ void handleGetBoard(CommandContext *ctx);
 void handleGetTask(CommandContext *ctx);
 void handleGetAllData(CommandContext *ctx);
 void handleUpdateBoard(CommandContext *ctx);
+void handleRemoveBoard(CommandContext *ctx);
+void handleRemoveTask(CommandContext *ctx);
 void handleUpdateTask(CommandContext *ctx);
 void handleSetTaskStatus(CommandContext *ctx);
 

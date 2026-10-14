@@ -15,11 +15,14 @@ void *searchTaskWorker(void *arg)
     for (int i = data->startIndex; i < data->endIndex; i++)
     {
         int match = 0;
-        if (data->targetId != NULL && strcmp(data->board->tasks[i].taskId, data->targetId) == 0)
+        /* Retained tombstone slots must never be returned as active tasks. */
+        if (!data->board->tasks[i].isDeleted &&
+            data->targetId != NULL && strcmp(data->board->tasks[i].taskId, data->targetId) == 0)
         {
             match = 1;
         }
-        else if (data->targetTitle != NULL && strcmp(data->board->tasks[i].taskTitle, data->targetTitle) == 0)
+        else if (!data->board->tasks[i].isDeleted &&
+                 data->targetTitle != NULL && strcmp(data->board->tasks[i].taskTitle, data->targetTitle) == 0)
         {
             match = 1;
         }
@@ -101,7 +104,8 @@ Task *findTask(Board *board, const char *taskId)
         printf("[Sequential Task Search] Total tasks (%d) < 100. Using single thread loop.\n", total);
         for (int i = 0; i < total; i++)
         {
-            if (strcmp(board->tasks[i].taskId, taskId) == 0)
+            if (!board->tasks[i].isDeleted &&
+                strcmp(board->tasks[i].taskId, taskId) == 0)
             {
                 return &board->tasks[i];
             }
@@ -125,7 +129,8 @@ Task *findTaskByName(Board *board, const char *taskTitle)
         printf("[Sequential Task Search] Total tasks (%d) < 100. Using single thread loop.\n", total);
         for (int i = 0; i < total; i++)
         {
-            if (strcmp(board->tasks[i].taskTitle, taskTitle) == 0)
+            if (!board->tasks[i].isDeleted &&
+                strcmp(board->tasks[i].taskTitle, taskTitle) == 0)
             {
                 return &board->tasks[i];
             }
@@ -190,20 +195,30 @@ void handleGetTask(CommandContext *ctx)
         return;
     }
 
-    // Case 2: List all tasks for board (GET_TASKS)
-    if (board->totalTasks == 0)
+    // Case 2: List all active tasks for board (GET_TASKS).
+    int activeTaskCount = 0;
+    for (int i = 0; i < board->totalTasks; i++)
+    {
+        if (!board->tasks[i].isDeleted)
+            activeTaskCount++;
+    }
+
+    if (activeTaskCount == 0)
     {
         snprintf(response, sizeof(response), "%s%s%d\n", cmd, COMMAND_SEPARATOR, STATUS_EMPTY_BOARD);
         send(ctx->clientSocket, response, strlen(response), 0);
         return;
     }
 
-    // Format task list: COMMAND,STATUS_OK,totalTasks,task1_id:task1_title,...
+    // Format task list using active count; tombstones stay hidden from clients.
     int offset = snprintf(response, sizeof(response), "%s%s%d%s%d",
-                          cmd, COMMAND_SEPARATOR, STATUS_OK, COMMAND_SEPARATOR, board->totalTasks);
+                          cmd, COMMAND_SEPARATOR, STATUS_OK, COMMAND_SEPARATOR, activeTaskCount);
 
     for (int i = 0; i < board->totalTasks; i++)
     {
+        if (board->tasks[i].isDeleted)
+            continue;
+
         offset += snprintf(response + offset, sizeof(response) - offset, "%s%s:%s",
                            COMMAND_SEPARATOR, board->tasks[i].taskId, board->tasks[i].taskTitle);
     }

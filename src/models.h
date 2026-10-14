@@ -13,8 +13,8 @@
 #define BOARD_FILENAME "board.txt"
 #define TASK_FILENAME "task.txt"
 
-
-
+/* Exact on-disk representation of a soft-deleted board record. */
+#define DELETED_BOARD_RECORD "---"
 
 typedef struct task Task;
 
@@ -22,6 +22,8 @@ struct task {
     char taskId[TASKID_SIZE];
     char taskTitle[TASK_TITLE_SIZE];
     int isFinish;
+    /* Non-zero when this array slot is a soft-deleted task tombstone. */
+    int isDeleted;
 };
 
 typedef struct board Board;
@@ -29,8 +31,10 @@ typedef struct board Board;
 struct board {
     char boardId[BOARDID_SIZE];
     char boardTitle[BOARD_TITLE_SIZE];
-    struct task tasks[MAX_TASK]; 
+    struct task tasks[MAX_TASK];
     int totalTasks;
+    /* Non-zero when this array slot is a soft-deleted board tombstone. */
+    int isDeleted;
 };
 
 typedef struct project Project;
