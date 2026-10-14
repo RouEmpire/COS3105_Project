@@ -422,6 +422,106 @@ function handle_update_task
     end
 end
 
+# Feature [7]: Generate Fake Data
+function handle_generate_fake_data
+    echo ""
+    set_color cyan --bold
+    echo "=== [7] GENERATE FAKE DATA ==="
+    set_color normal
+    echo "This calls generate_fake_data.py with the options you provide."
+    echo "Press Enter on any option to use its default value."
+    echo ""
+
+    # --- Option 1: Number of boards ---
+    read -P "Number of boards to generate [default: 1000] > " num_boards
+    set num_boards (string trim -- $num_boards)
+    # Validate: must be a positive integer, or empty (use default)
+    if test -n "$num_boards"
+        if not string match -qr '^[1-9][0-9]*$' -- $num_boards
+            set_color red
+            echo "Error: Number of boards must be a positive integer. Got: '$num_boards'"
+            set_color normal
+            return
+        end
+    else
+        set num_boards 1000
+    end
+
+    # --- Option 2: Tasks per board ---
+    read -P "Number of tasks per board [default: 300] > " tasks_per_board
+    set tasks_per_board (string trim -- $tasks_per_board)
+    if test -n "$tasks_per_board"
+        if not string match -qr '^[1-9][0-9]*$' -- $tasks_per_board
+            set_color red
+            echo "Error: Tasks per board must be a positive integer. Got: '$tasks_per_board'"
+            set_color normal
+            return
+        end
+    else
+        set tasks_per_board 300
+    end
+
+    # --- Option 3: Board output file ---
+    read -P "Board output file [default: board.txt] > " board_file
+    set board_file (string trim -- $board_file)
+    if test -z "$board_file"
+        set board_file "board.txt"
+    end
+
+    # --- Option 4: Task output file ---
+    read -P "Task output file [default: task.txt] > " task_file
+    set task_file (string trim -- $task_file)
+    if test -z "$task_file"
+        set task_file "task.txt"
+    end
+
+    # --- Confirmation summary before running ---
+    echo ""
+    set_color yellow
+    echo "About to generate:"
+    echo "  Boards       : $num_boards"
+    echo "  Tasks/Board  : $tasks_per_board"
+    set_color yellow
+    echo "  Total Tasks  : "(math $num_boards \* $tasks_per_board)
+    echo "  Board file   : $board_file"
+    echo "  Task file    : $task_file"
+    set_color normal
+
+    read -P "Proceed? [Y/n] > " confirm
+    set confirm (string trim -- $confirm | string lower)
+    if test "$confirm" = "n"; or test "$confirm" = "no"
+        set_color yellow
+        echo "Cancelled."
+        set_color normal
+        return
+    end
+
+    # --- Run the Python generator with chosen options ---
+    echo ""
+    set_color cyan
+    echo "Running generate_fake_data.py..."
+    set_color normal
+
+    python3 ./generate_fake_data.py \
+        --boards $num_boards \
+        --tasks $tasks_per_board \
+        --board-file $board_file \
+        --task-file $task_file
+    set -l py_status $status
+
+    if test $py_status -eq 0
+        echo ""
+        set_color green --bold
+        echo "✅ Fake data generation completed successfully!"
+        set_color normal
+    else
+        echo ""
+        set_color red
+        echo "❌ generate_fake_data.py exited with an error (exit code $py_status)."
+        set_color normal
+    end
+end
+
 # Feature [T]: Run Test
 function handle_run_tests
     echo ""
@@ -489,6 +589,7 @@ while true
     echo "> [4] Add Task"
     echo "> [5] Update Board"
     echo "> [6] Update Task"
+    echo "> [7] Generate Fake Data"
     echo "> [ALL] Get all Data"
     echo "> [T] Run Test"
     echo "> [X] Exit"
@@ -512,6 +613,8 @@ while true
             handle_update_board
         case 6
             handle_update_task
+        case 7
+            handle_generate_fake_data
         case ALL all
             handle_get_all_data
         case T t
@@ -524,9 +627,7 @@ while true
             break
         case '*'
             set_color red
-            echo "Invalid choice '$choice'. Please enter 1, 2, 3, 4, 5, 6, ALL, T, or X."
+            echo "Invalid choice '$choice'. Please enter 1, 2, 3, 4, 5, 6, 7, ALL, T, or X."
             set_color normal
     end
 end
-
-

@@ -6,6 +6,7 @@
 #include "features/get_all_data.h"
 #include "features/update_board.h"
 #include "features/update_task.h"
+#include "features/set_task_status.h"
 #include <signal.h>
 #include <sys/mman.h>
 #include <semaphore.h>
@@ -44,6 +45,7 @@ int handleClient(SOCKET socket_client, char *read)
       {COMMAND_GET_ALL_DATA, handleGetAllData},
       {COMMAND_UPDATE_BOARD, handleUpdateBoard},
       {COMMAND_UPDATE_TASK, handleUpdateTask},
+      {COMMAND_SET_TASK_STATUS, handleSetTaskStatus},
       {NULL, NULL} // Sentinel to mark the end
   };
 
