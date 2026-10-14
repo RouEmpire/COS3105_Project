@@ -5,10 +5,8 @@ Script to generate fake Kanban boards and tasks for testing and benchmarking.
 Defaults to generating 1,000 boards and 300 tasks per board (300,000 total tasks).
 """
 
-import os
-import sys
 import argparse
-import random
+import os
 import time
 
 # Diverse sample themes and verbs for realistic fake names
@@ -16,7 +14,8 @@ BOARD_DOMAINS = [
     "Sprint Planning", "Feature Roadmap", "Bug Tracker", "DevOps Pipeline",
     "Security Audit", "API Redesign", "Cloud Migration", "Database Tuning",
     "Frontend UX", "Mobile App Core", "Machine Learning Lab", "Network Infra",
-    "Code Refactoring", "Microservices", "Release Engineering"
+    "Code Refactoring", "Microservices", "Release Engineering", "UX Engineering",
+    "Linux Manipulation", "Server Administration", "Game Development", "Customer Analysis"
 ]
 
 TASK_VERBS = [
@@ -30,7 +29,8 @@ TASK_OBJECTS = [
     "TCP socket buffer", "memory allocation leak", "mutex synchronization",
     "POSIX shared memory", "CRUD endpoint logic", "data ingestion script",
     "caching layer", "unit test suite", "asynchronous event loop",
-    "database indexing", "signal handler", "IPC message queue"
+    "database indexing", "signal handler", "IPC message queue",
+    "Pipe test", "Redesign structure", "Syntax checkup"
 ]
 
 
