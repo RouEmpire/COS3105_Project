@@ -360,6 +360,7 @@ Compile and run an individual C test from the project root:
 ./run_test.sh test_models
 ./run_test.sh test_remove_board
 ./run_test.sh test_remove_task
+./run_test.sh test_return_status
 ```
 
 The `.c` extension is optional. The runner compiles the selected file under `src/tests/` together with the model, common, and feature sources, then runs the resulting test executable. The test suite covers models and persistence as well as individual feature behavior. The interactive Fish menu's `T` option runs its configured collection of tests.

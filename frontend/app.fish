@@ -639,45 +639,51 @@ function handle_run_tests
 
     echo ""
     set_color yellow
-    echo "[1/7] Running test_add_board..."
+    echo "[1/8] Running test_add_board..."
     set_color normal
     ./run_test.sh test_add_board
 
     echo ""
     set_color yellow
-    echo "[2/7] Running test_add_task..."
+    echo "[2/8] Running test_add_task..."
     set_color normal
     ./run_test.sh test_add_task
 
     echo ""
     set_color yellow
-    echo "[3/7] Running test_update_board..."
+    echo "[3/8] Running test_update_board..."
     set_color normal
     ./run_test.sh test_update_board
 
     echo ""
     set_color yellow
-    echo "[4/7] Running test_update_task..."
+    echo "[4/8] Running test_update_task..."
     set_color normal
     ./run_test.sh test_update_task
 
     echo ""
     set_color yellow
-    echo "[5/7] Running test_get_board..."
+    echo "[5/8] Running test_get_board..."
     set_color normal
     ./run_test.sh test_get_board
 
     echo ""
     set_color yellow
-    echo "[6/7] Running test_models..."
+    echo "[6/8] Running test_models..."
     set_color normal
     ./run_test.sh test_models
 
     echo ""
     set_color yellow
-    echo "[7/7] Running test_get_all_data..."
+    echo "[7/8] Running test_get_all_data..."
     set_color normal
     ./run_test.sh test_get_all_data
+
+    echo ""
+    set_color yellow
+    echo "[8/8] Running test_return_status..."
+    set_color normal
+    ./run_test.sh test_return_status
 
     echo ""
     set_color green --bold
