@@ -206,6 +206,8 @@ clang -I./src src/server.c src/models.c src/common.c src/features/*.c -o run_ser
 
 ## Interactive Fish client
 
+Append `--status` or `-s` to a menu choice to display the protocol status codes for that action without running it. For example, enter `5 --status` (or `5 -s`) to see the possible responses for Update Board.
+
 The Fish menu offers:
 
 | Option | Action |

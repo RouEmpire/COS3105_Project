@@ -685,6 +685,71 @@ function handle_run_tests
     set_color normal
 end
 
+# Show the response statuses that the selected menu command can return.
+# This is a local help action; it does not send a command to the server.
+function handle_show_status --argument-names command_choice
+    echo ""
+    set_color cyan --bold
+    echo "=== STATUS CODES FOR COMMAND [$command_choice] ==="
+    set_color normal
+
+    switch (string upper -- $command_choice)
+        case 1
+            echo "0   STATUS_OK - board found"
+            echo "200 STATUS_INVALID_ARGUMENTS"
+            echo "201 STATUS_BOARD_NOT_FOUND"
+        case 2
+            echo "0   STATUS_OK - task found or task list returned"
+            echo "200 STATUS_INVALID_ARGUMENTS"
+            echo "201 STATUS_BOARD_NOT_FOUND"
+            echo "202 STATUS_EMPTY_BOARD"
+            echo "203 STATUS_TASK_NOT_FOUND"
+        case 3
+            echo "0   STATUS_OK - board created"
+            echo "1   STATUS_FAIL"
+            echo "200 STATUS_INVALID_ARGUMENTS"
+        case 4
+            echo "0   STATUS_OK - task created"
+            echo "1   STATUS_FAIL"
+            echo "200 STATUS_INVALID_ARGUMENTS"
+            echo "201 STATUS_BOARD_NOT_FOUND"
+        case 5
+            echo "0   STATUS_OK - board updated"
+            echo "1   STATUS_FAIL"
+            echo "200 STATUS_INVALID_ARGUMENTS"
+            echo "201 STATUS_BOARD_NOT_FOUND"
+            echo "500 STATUS_SAVE_BOARD_FAIL"
+        case 6
+            echo "0   STATUS_OK - task updated"
+            echo "1   STATUS_FAIL"
+            echo "200 STATUS_INVALID_ARGUMENTS"
+            echo "201 STATUS_BOARD_NOT_FOUND"
+            echo "203 STATUS_TASK_NOT_FOUND"
+            echo "502 STATUS_SAVE_TASK_FAIL"
+        case 8
+            echo "0   STATUS_OK - board soft deleted"
+            echo "200 STATUS_INVALID_ARGUMENTS"
+            echo "201 STATUS_BOARD_NOT_FOUND"
+            echo "500 STATUS_SAVE_BOARD_FAIL"
+        case 9
+            echo "0   STATUS_OK - task soft deleted"
+            echo "200 STATUS_INVALID_ARGUMENTS"
+            echo "201 STATUS_BOARD_NOT_FOUND"
+            echo "203 STATUS_TASK_NOT_FOUND"
+            echo "502 STATUS_SAVE_TASK_FAIL"
+        case ALL all
+            echo "0   STATUS_OK - data response streamed"
+            echo "1   STATUS_FAIL - request could not be completed"
+        case 7 T t X x
+            echo "This is a local action and does not return a server protocol status."
+        case '*'
+            set_color red
+            echo "No menu command '$command_choice' has status information."
+            set_color normal
+            return 1
+    end
+end
+
 # Main Interactive CLI Prompt Loop
 while true
     echo ""
@@ -706,9 +771,23 @@ while true
     set_color magenta
     echo "--- # --- # ---"
     set_color normal
-    read -P "[COMMAND] > " choice
+    read -P "[COMMAND] (append --status or -s for status codes) > " choice
 
-    set choice (string trim -- $choice)
+    # Parse the menu choice and its optional status-display flag.
+    set -l choice_parts (string split -n ' ' -- (string trim -- $choice))
+    set choice $choice_parts[1]
+
+    if test (count $choice_parts) -gt 1
+        if test (count $choice_parts) -eq 2; and contains -- $choice_parts[2] --status -s
+            handle_show_status $choice
+            continue
+        end
+
+        set_color red
+        echo "Invalid arguments. Append only --status or -s after a menu choice."
+        set_color normal
+        continue
+    end
 
     switch $choice
         case 1
