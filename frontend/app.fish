@@ -750,6 +750,142 @@ function handle_show_status --argument-names command_choice
     end
 end
 
+# Send the selected server command and display the status returned by the server.
+# This intentionally executes the operation (including mutations such as add/delete).
+function handle_return_status --argument-names command_choice
+    set -l protocol_command ""
+
+    switch (string upper -- $command_choice)
+        case 1
+            read -P "Enter Board ID > " board_id
+            set board_id (string trim -- $board_id)
+            set protocol_command "GET_BOARD,$board_id"
+        case 2
+            read -P "Enter Board ID > " board_id
+            set board_id (string trim -- $board_id)
+            read -P "Enter Task ID (press Enter to list tasks) > " task_id
+            set task_id (string trim -- $task_id)
+            if test -z "$task_id"
+                set protocol_command "GET_TASKS,$board_id"
+            else
+                set protocol_command "GET_TASK,$board_id,$task_id"
+            end
+        case 3
+            read -P "Enter Board Title > " board_title
+            set board_title (string trim -- $board_title)
+            set protocol_command "ADD_BOARD,$board_title"
+        case 4
+            read -P "Enter Board ID > " board_id
+            set board_id (string trim -- $board_id)
+            read -P "Enter Task Title > " task_title
+            set task_title (string trim -- $task_title)
+            set protocol_command "ADD_TASK,$board_id,$task_title"
+        case 5
+            read -P "Enter Board ID to update > " board_id
+            set board_id (string trim -- $board_id)
+            read -P "Enter New Board Title > " board_title
+            set board_title (string trim -- $board_title)
+            set protocol_command "UPDATE_BOARD,$board_id,$board_title"
+        case 6
+            read -P "Enter Board ID > " board_id
+            set board_id (string trim -- $board_id)
+            read -P "Enter Task ID to update > " task_id
+            set task_id (string trim -- $task_id)
+            read -P "Enter New Task Title > " task_title
+            set task_title (string trim -- $task_title)
+            set protocol_command "UPDATE_TASK,$board_id,$task_id,$task_title"
+        case 8
+            read -P "Enter Board ID to soft delete > " board_id
+            set board_id (string trim -- $board_id)
+            set protocol_command "DELETE_BOARD,$board_id"
+        case 9
+            read -P "Enter Board ID > " board_id
+            set board_id (string trim -- $board_id)
+            read -P "Enter Task ID to soft delete > " task_id
+            set task_id (string trim -- $task_id)
+            set protocol_command "DELETE_TASK,$board_id,$task_id"
+        case ALL all
+            read -P "Board limit (0 for all) > " board_limit
+            set board_limit (string trim -- $board_limit)
+            read -P "Task limit per board (0 for all) > " task_limit
+            set task_limit (string trim -- $task_limit)
+            if test -z "$board_limit"
+                set board_limit 0
+            end
+            if test -z "$task_limit"
+                set task_limit 0
+            end
+            set protocol_command "GET_ALL,$board_limit,$task_limit"
+        case 7 T t X x
+            set_color yellow
+            echo "This menu choice is local and has no server return status."
+            set_color normal
+            return 1
+        case '*'
+            set_color red
+            echo "No server command is associated with menu choice '$command_choice'."
+            set_color normal
+            return 1
+    end
+
+    if test -z "$protocol_command"
+        set_color red
+        echo "Could not build a server command for menu choice '$command_choice'."
+        set_color normal
+        return 1
+    end
+
+    echo "Sending: $protocol_command"
+    set -l response (send_tcp_command "$protocol_command")
+    if test (count $response) -eq 0
+        set_color red
+        echo "No response received. Check that the server is running on 127.0.0.1:3030 and that ncat is installed."
+        set_color normal
+        return 1
+    end
+
+    # The protocol places the numeric status in the second comma-delimited field.
+    set -l response_fields (string split ',' -- $response[1])
+    set -l returned_status "Unknown"
+    if test (count $response_fields) -ge 2
+        set returned_status $response_fields[2]
+    end
+
+    set_color cyan --bold
+    echo "Server response: $response[1]"
+    echo "Returned status: $returned_status"
+    set_color normal
+
+    switch $returned_status
+        case 0
+            echo "Meaning: STATUS_OK"
+        case 1
+            echo "Meaning: STATUS_FAIL"
+        case 3
+            echo "Meaning: STATUS_UNKNOWN (the server did not recognize the command)"
+        case 200
+            echo "Meaning: STATUS_INVALID_ARGUMENTS"
+        case 201
+            echo "Meaning: STATUS_BOARD_NOT_FOUND"
+        case 202
+            echo "Meaning: STATUS_EMPTY_BOARD"
+        case 203
+            echo "Meaning: STATUS_TASK_NOT_FOUND"
+        case 204
+            echo "Meaning: STATUS_EMPTY_TASK"
+        case 500
+            echo "Meaning: STATUS_SAVE_BOARD_FAIL"
+        case 501
+            echo "Meaning: STATUS_ADD_BOARD_FAIL"
+        case 502
+            echo "Meaning: STATUS_SAVE_TASK_FAIL"
+        case 503
+            echo "Meaning: STATUS_ADD_TASK_FAIL"
+        case '*'
+            echo "Meaning: unrecognized status code"
+    end
+end
+
 # Main Interactive CLI Prompt Loop
 while true
     echo ""
@@ -766,27 +902,39 @@ while true
     echo "> [8] Soft Delete Board"
     echo "> [9] Soft Delete Task"
     echo "> [ALL] Get all Data"
+    echo "> [TIP] Get useful tip"
     echo "> [T] Run Test"
     echo "> [X] Exit"
     set_color magenta
     echo "--- # --- # ---"
     set_color normal
-    read -P "[COMMAND] (append --status or -s for status codes) > " choice
+    read -P "[COMMAND] > " choice
 
     # Parse the menu choice and its optional status-display flag.
     set -l choice_parts (string split -n ' ' -- (string trim -- $choice))
     set choice $choice_parts[1]
 
     if test (count $choice_parts) -gt 1
-        if test (count $choice_parts) -eq 2; and contains -- $choice_parts[2] --status -s
-            handle_show_status $choice
+        if test (count $choice_parts) -ne 2
+            set_color red
+            echo "Invalid arguments. Append only one supported option after a menu choice."
+            set_color normal
             continue
         end
 
-        set_color red
-        echo "Invalid arguments. Append only --status or -s after a menu choice."
-        set_color normal
-        continue
+        switch $choice_parts[2]
+            case --status -s
+                handle_show_status $choice
+                continue
+            case --return-stats -r
+                handle_return_status $choice
+                continue
+            case '*'
+                set_color red
+                echo "Unknown option '$choice_parts[2]'. Use --status/-s or --return-stats/-r."
+                set_color normal
+                continue
+        end
     end
 
     switch $choice
@@ -808,7 +956,7 @@ while true
             handle_delete_board
         case 9
             handle_delete_task
-        case ALL all
+        case ALL all All
             handle_get_all_data
         case T t
             handle_run_tests
@@ -818,6 +966,9 @@ while true
             echo "Exiting Zeen's Kanban Board. Goodbye!"
             set_color normal
             break
+        case TIP tip Tip
+            echo "append --status or -s to get possible status return"
+            echo "append --return-stats or -r to test return status"
         case '*'
             set_color red
             echo "Invalid choice '$choice'. Please enter 1, 2, 3, 4, 5, 6, 7, 8, 9, ALL, T, or X."
