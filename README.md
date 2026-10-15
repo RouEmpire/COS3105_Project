@@ -206,6 +206,10 @@ clang -I./src src/server.c src/models.c src/common.c src/features/*.c -o run_ser
 
 ## Interactive Fish client
 
+Append `--status` or `-s` to a menu choice to display the protocol status codes for that action without running it. For example, enter `5 --status` (or `5 -s`) to see the possible responses for Update Board.
+
+Append `--return-stats` or `-r` to run the selected server command and display the actual response and returned status code. For example, `1 -r` prompts for a board ID, sends `GET_BOARD,<boardId>`, then shows the response status. **This mode executes the operation**: choices that add, update, or delete data will modify the project just as they normally would. Local choices such as fake-data generation, tests, and exit do not have a server status.
+
 The Fish menu offers:
 
 | Option | Action |
@@ -368,6 +372,7 @@ Compile and run an individual C test from the project root:
 ./run_test.sh test_models
 ./run_test.sh test_remove_board
 ./run_test.sh test_remove_task
+./run_test.sh test_return_status
 ```
 
 The `.c` extension is optional. The runner compiles the selected file under `src/tests/` together with the model, common, and feature sources, then runs the resulting test executable. The test suite covers models and persistence as well as individual feature behavior. The interactive Fish menu's `T` option runs its configured collection of tests.
