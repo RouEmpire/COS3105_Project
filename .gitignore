@@ -3,5 +3,5 @@ obj/
 board.txt
 task.txt
 *.bak
-run_server
 test_*
+run_server

@@ -225,6 +225,18 @@ The Fish menu offers:
 
 The Fish client sends protocol lines over TCP using `ncat`, for example `DELETE_TASK,1,2`. It prints a message for successful responses and common errors, including invalid arguments and missing boards/tasks.
 
+## Keyboard TUI
+
+An alternative terminal interface is available in `frontend/TUI`. It uses the vendored RogueUtil single-header library in `lib/rogueutil-1.0` and connects directly to the same server at `127.0.0.1:3030`.
+
+```bash
+cd frontend/TUI
+make
+./kanban-tui
+```
+
+Navigate its two-column menu with `W/A/S/D`, press Enter to choose an action, and use `Q` or Escape to quit. It supports board/task lookup, create/update, soft delete, task status toggling, and bulk retrieval. All mutating actions are real server requests.
+
 ## Features and parallel programming
 
 - **TCP command server:** accepts comma-separated commands on port `3030`. The server forks a child process to serve a client connection.
